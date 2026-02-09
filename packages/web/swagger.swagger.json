@@ -36,6 +36,9 @@
       "name": "CommentService"
     },
     {
+      "name": "MediaService"
+    },
+    {
       "name": "MessageService"
     }
   ],

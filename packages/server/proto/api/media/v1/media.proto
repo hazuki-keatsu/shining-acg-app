@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package api.media.v1;
+
+option go_package = "app.shiningacg.club/server/gen/proto/api/media/v1;mediav1";
+
+import "google/protobuf/timestamp.proto";
+
+// MediaService 处理文件上传元数据和控制流。
+// 实际的文件传输由单独的 Tus 兼容服务处理。
+service MediaService {
+  // 启动上传会话并返回 Tus 端点。
+  rpc CreateUpload(CreateUploadRequest) returns (CreateUploadResponse);
+
+  // 检查上传或处理任务的状态。
+  rpc GetUploadStatus(GetUploadStatusRequest) returns (GetUploadStatusResponse);
+
+  // 确认上传完成（可选，如果使用 Tus 的 webhooks）。
+  rpc FinishUpload(FinishUploadRequest) returns (FinishUploadResponse);
+}
+
+enum MediaType {
+  MEDIA_TYPE_UNSPECIFIED = 0;
+  MEDIA_TYPE_IMAGE = 1;
+  MEDIA_TYPE_VIDEO = 2;
+  MEDIA_TYPE_AUDIO = 3;
+  MEDIA_TYPE_DOCUMENT = 4;
+}
+
+enum UploadStatus {
+  UPLOAD_STATUS_UNSPECIFIED = 0;
+  UPLOAD_STATUS_PENDING = 1;    // 已创建，等待开始上传
+  UPLOAD_STATUS_UPLOADING = 2;  // 正在上传中
+  UPLOAD_STATUS_PROCESSING = 3; // 上传完成，处理中（例如转码）
+  UPLOAD_STATUS_COMPLETED = 4;  // 就绪可用
+  UPLOAD_STATUS_FAILED = 5;     // 失败
+}
+
+message CreateUploadRequest {
+  string filename = 1;
+  int64 size_bytes = 2;
+  string mime_type = 3;
+  MediaType media_type = 4;
+  string md5_checksum = 5; // 可选，用于完整性校验
+}
+
+message CreateUploadResponse {
+  string upload_id = 1;
+  string upload_url = 2; // 用于推送数据的 Tus 端点
+  string auth_token = 3; // 如果需要，传递给 Tus 服务的令牌
+  int64 expires_at = 4; // Unix 时间戳
+}
+
+message GetUploadStatusRequest {
+  string upload_id = 1;
+}
+
+message GetUploadStatusResponse {
+  string upload_id = 1;
+  UploadStatus status = 2;
+  string public_url = 3; // 仅在 COMPLETED 状态下可用
+  float progress = 4; // 0.0 到 1.0 (用于处理进度)
+  string error_message = 5;
+}
+
+message FinishUploadRequest {
+  string upload_id = 1;
+}
+
+message FinishUploadResponse {
+  UploadStatus status = 1;
+}
